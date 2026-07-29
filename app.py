@@ -82,8 +82,9 @@ class KPIDataProcessor:
         """Process KPI files based on type"""
         try:
             df = pd.read_excel(file, engine='openpyxl')
-            df = ['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings'].copy()
-            df = ['Zone'].notna()
+            # FIX: Corrected the DataFrame operations
+            df = df[['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings']].copy()
+            df = df[df['Zone'].notna()]
             df['Kpi Source'] = kpi_type
             return df
         except Exception as e:
@@ -175,14 +176,20 @@ class KPIDataProcessor:
             # Filter not working vehicles
             not_working = merge[(merge['Status'] == 'Not Working') & (merge['Vehicle Number'] != 'TEST 02')]
             
+            # Select columns
             not_working = not_working[['Date', 'GPS IMEI No.', 'Vehicle Number', 'V Id', 'Vehicle Type', 
-                                      'Last Log Received At', 'Age', 'Status', 'Kpi Source']]
+                                      'Last Log Received At', 'Age', 'Status', 'Kpi Source']].copy()
+            
+            # Process Last Log Received At
             if 'Last Log Received At' in not_working.columns:
                 not_working['Last Log Received At'] = pd.to_datetime(
                     not_working['Last Log Received At'], errors='coerce', dayfirst=True
                 ).dt.strftime('%d-%m-%Y')
-
-            not_working['Last Log Received At'] = not_working['Last Log Received At'].astype(int)
+                
+                # Handle NaN values before converting to int
+                not_working['Last Log Received At'] = not_working['Last Log Received At'].fillna('01-01-1970')
+                not_working['Last Log Received At'] = not_working['Last Log Received At'].astype(str)
+            
             # Process remarks if available
             if remarks_file:
                 remarks_df = self.process_gps_remarks(remarks_file)
@@ -239,11 +246,11 @@ class KPIDataProcessor:
         
         stats = {
             'total_vehicles': len(self.final_df),
-            'unique_zones': self.final_df['Zone'].nunique(),
-            'unique_facilities': self.final_df['Facility'].nunique(),
-            'total_imei': self.final_df['GPS IMEI No.'].nunique(),
-            'remarks_summary': self.final_df['Updated Remarks'].value_counts().to_dict(),
-            'zone_summary': self.final_df['Zone'].value_counts().to_dict()
+            'unique_zones': self.final_df['Zone'].nunique() if 'Zone' in self.final_df.columns else 0,
+            'unique_facilities': self.final_df['Facility'].nunique() if 'Facility' in self.final_df.columns else 0,
+            'total_imei': self.final_df['GPS IMEI No.'].nunique() if 'GPS IMEI No.' in self.final_df.columns else 0,
+            'remarks_summary': self.final_df['Updated Remarks'].value_counts().to_dict() if 'Updated Remarks' in self.final_df.columns else {},
+            'zone_summary': self.final_df['Zone'].value_counts().to_dict() if 'Zone' in self.final_df.columns else {}
         }
         
         return stats
@@ -433,31 +440,37 @@ def main():
             with col1:
                 zone_filter = st.multiselect(
                     "Filter by Zone",
-                    options=sorted(final_df['Zone'].unique()),
+                    options=sorted(final_df['Zone'].unique()) if 'Zone' in final_df.columns else [],
                     default=[]
                 )
             with col2:
                 status_filter = st.multiselect(
                     "Filter by Status",
-                    options=sorted(final_df['Updated Remarks'].unique()),
+                    options=sorted(final_df['Updated Remarks'].unique()) if 'Updated Remarks' in final_df.columns else [],
                     default=[]
                 )
             with col3:
                 facility_filter = st.multiselect(
                     "Filter by Facility",
-                    options=sorted(final_df['Facility'].unique()),
+                    options=sorted(final_df['Facility'].unique()) if 'Facility' in final_df.columns else [],
                     default=[]
                 )
             
+            # Select columns for display
+            display_cols = ['Date','GPS IMEI No.','Vehicle Number','V Id','Vehicle Type']
+            if 'Facility' in final_df.columns:
+                display_cols.append('Facility')
+            display_cols.extend(['Last Log Received At','Status','Technician','Updated Remarks','Age','Kpi Source'])
+            if 'Remarks' in final_df.columns:
+                display_cols.extend(['Remarks','User','Lat & Long','Time'])
+            
             # Apply filters
-            filtered_df = final_df[['Date','GPS IMEI No.','Vehicle Number',	'V Id',	'Vehicle Type',	
-                                    'Facility', 'Last Log Received At',	'Status', 'Technician','Updated Remarks','Age', 'Kpi Source',
-                                    	'Remarks',	'User',	'Lat & Long',	'Time']].copy()
-            if zone_filter:
+            filtered_df = final_df[display_cols].copy()
+            if zone_filter and 'Zone' in filtered_df.columns:
                 filtered_df = filtered_df[filtered_df['Zone'].isin(zone_filter)]
-            if status_filter:
+            if status_filter and 'Updated Remarks' in filtered_df.columns:
                 filtered_df = filtered_df[filtered_df['Updated Remarks'].isin(status_filter)]
-            if facility_filter:
+            if facility_filter and 'Facility' in filtered_df.columns:
                 filtered_df = filtered_df[filtered_df['Facility'].isin(facility_filter)]
             
             # Display table with original data
@@ -465,13 +478,7 @@ def main():
                 filtered_df,
                 use_container_width=True,
                 height=400,
-                hide_index=True,
-                column_config={
-        "Date": st.column_config.DateColumn(
-            "Date",
-            format="DD-MM-YYYY", # This sets the display format
-        )
-    }
+                hide_index=True
             )
             
             st.caption(f"Showing {len(filtered_df)} of {len(final_df)} records")
