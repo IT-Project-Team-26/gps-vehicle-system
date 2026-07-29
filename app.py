@@ -82,7 +82,7 @@ class KPIDataProcessor:
         """Process KPI files based on type"""
         try:
             df = pd.read_excel(file, engine='openpyxl')
-            df = ['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings']].copy()
+            df = ['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings'].copy()
             df = 'Zone'].notna()]
             'Kpi Source'] = kpi_type
             return df
