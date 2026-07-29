@@ -82,9 +82,9 @@ class KPIDataProcessor:
         """Process KPI files based on type"""
         try:
             df = pd.read_excel(file, engine='openpyxl')
-            df = df[['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings']].copy()
-            df = df[df['Zone'].notna()]
-            df['Kpi Source'] = kpi_type
+            df = ['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings']].copy()
+            df = 'Zone'].notna()]
+            'Kpi Source'] = kpi_type
             return df
         except Exception as e:
             st.error(f"Error processing {kpi_type}: {str(e)}")
@@ -182,7 +182,7 @@ class KPIDataProcessor:
                     not_working['Last Log Received At'], errors='coerce', dayfirst=True
                 ).dt.strftime('%d-%m-%Y')
 
-            df['Last Log Received At'] = df['Last Log Received At'].astype(int)
+            not_working['Last Log Received At'] = not_working['Last Log Received At'].astype(int)
             # Process remarks if available
             if remarks_file:
                 remarks_df = self.process_gps_remarks(remarks_file)
