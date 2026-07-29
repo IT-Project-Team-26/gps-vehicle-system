@@ -83,8 +83,8 @@ class KPIDataProcessor:
         try:
             df = pd.read_excel(file, engine='openpyxl')
             df = ['Kpi Date', 'Zone', 'Vehicle Number', 'Marching In Out Timings'].copy()
-            df = 'Zone'].notna()]
-            'Kpi Source'] = kpi_type
+            df = ['Zone'].notna()
+            df['Kpi Source'] = kpi_type
             return df
         except Exception as e:
             st.error(f"Error processing {kpi_type}: {str(e)}")
