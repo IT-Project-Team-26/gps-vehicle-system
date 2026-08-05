@@ -358,7 +358,7 @@ def main():
             # Excel download
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                st.session_state.processor.filtered_df.to_excel(writer, index=False, sheet_name='Report')
+                st.session_state.processor.final_df.to_excel(writer, index=False, sheet_name='Report')
             
             excel_data = output.getvalue()
             st.download_button(
